@@ -4,7 +4,7 @@
 // #include <Preferences.h>
 #define BUZZER_PIN     12 
 #define MOSFET_PIN     2
-#define Sensor_Pin     4  // Chân GPIO4 của ESP32 kết nối với ngõ ra của sensor
+#define SENSOR_PIN     4  // Chân GPIO4 của ESP32 kết nối với ngõ ra của sensor
 #define LCD_ADDRESS 0x27
 #define LCD_COLUMNS 20
 #define LCD_ROWS 4
@@ -15,7 +15,6 @@ LCD lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
  ***************************************************/
 #define PRESS_COUNT_ADDR 0
 #define SETUP_COUNT_ADDR 4
-   // Biến để đếm số lần button được nhấn
 
 /***************************************************
  *                  CHECK JIGS                      *
@@ -23,7 +22,7 @@ LCD lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 int ValveState;
 int sensorState = 0;      // Biến để lưu trữ trạng thái của sensor
 void Checksensor(){
-sensorState = digitalRead(Sensor_Pin);  // Đọc trạng thái của sensor
+sensorState = digitalRead(SENSOR_PIN);  // Đọc trạng thái của sensor
   if (sensorState == HIGH) {
       sensorState = 0;
   } 
@@ -41,7 +40,7 @@ void CloseValve(){
   
 }
 void OpenValve(){
-  // Tắt MOSFET (tải ngừng hoạt động)
+  // Tắt MOSFET (tải ngừng hoạt động
     digitalWrite(MOSFET_PIN, LOW);
       ValveState == 0;
     delay(4000);  // Duy trì trạng thái OFF trong 4 giây
@@ -50,46 +49,46 @@ void OpenValve(){
 /***************************************************
 *               CHECK BUTTON                        *
 ****************************************************/
-int buttonState = 0;      // Biến để lưu trạng thái hiện tại của button
-int errorCode = 0; // Lưu biến lỗi
-int SetupCount = 0;        // Biến setup số lần nhấn
-int errorCount2 = 0;     // Biến đếm số lần lỗi liệt nút
-int errorCount3 = 0;     // Biến đếm số lần lỗi dính nút
-int pressCount = 0;    
+int8_t buttonState = 0;      // Biến để lưu trạng thái hiện tại của button
+int8_t errorCode = 0; // Lưu biến lỗi
+int32_t SetupCount = 0;        // Biến setup số lần nhấn
+int8_t errorCount2 = 0;     // Biến đếm số lần lỗi liệt nút
+int8_t errorCount3 = 0;     // Biến đếm số lần lỗi dính nút
+int32_t pressCount = 0;    
 
 bool systemRunning;
 volatile bool isPaused = false;  // Biến dùng để lưu trạng thái của hệ thống
 
 #define BUTTON_PIN   34
-#define BUTTON_UP_PIN 14
-#define BUTTON_DOWN_PIN 27
-#define BUTTON_PAUSE_PIN 26
-#define BUTTON_START_PIN 25
+#define BUTTON_UP_PIN 25
+#define BUTTON_DOWN_PIN 26
+#define BUTTON_PAUSE_PIN 27
+#define BUTTON_START_PIN 32
 
 
 /****************************************************
 *****************************************************/
 typedef enum DropButton{
-     ButtonStart,
-     ButtonPause,
-     ButtonUp,
-     ButtonDown
+     BUTTON_START,
+     BUTTON_PAUSE,
+     BUTTON_UP,
+     BUTTON_DOWN
 };
     
-  DropButton ButtonStatus = ButtonPause;
+  DropButton ButtonStatus = BUTTON_PAUSE;
 
     void Checkbutton(){
        if(digitalRead(BUTTON_PAUSE_PIN) ==LOW){
-        buttonState = ButtonPause;
+        buttonState = BUTTON_PAUSE;
        }
        else if(digitalRead(BUTTON_START_PIN)==LOW){
-          buttonState = ButtonStart;
+          buttonState = BUTTON_START;
        }
             else if(digitalRead(BUTTON_DOWN_PIN)==LOW){
-              buttonState = ButtonDown;
+              buttonState = BUTTON_DOWN;
             }
                  if(digitalRead(BUTTON_UP_PIN)==LOW){
-                    buttonState = ButtonUp;
+                    buttonState = BUTTON_UP;
                   }
     }
 /*********************************************************
@@ -103,17 +102,17 @@ typedef enum EventState{
 EventState eventCurrentState = STATE_EVENT_STARTUP;
 
 typedef enum SystemState {
-    RunningPiton,
-    CheckButton1,
-    CheckButton2,
-    ClosePiton,
-    PauseSystem,
-    SystemError1,
-    SystemError2,
-    SystemError3 
+    RUNNING_PITON,
+    CHECK_BUTTON_1,
+    CHECK_BUTTON_2,
+    CLOSE_PITON,
+    PAUSE_SYSTEM,
+    SYSTEM_ERROR_1,
+    SYSTEM_ERROR_2,
+    SYSTEM_ERROR_3 
 };
 
-SystemState currentState = PauseSystem; // Khởi tạo trạng thái hiện tại
+SystemState currentState = PAUSE_SYSTEM; // Khởi tạo trạng thái hiện tại
 
 
 void StateManager(){
@@ -124,20 +123,20 @@ void StateManager(){
          Checkbutton();
          switch (buttonState)
          {
-         case ButtonPause:
+         case BUTTON_PAUSE:
              EEPROM.write(PRESS_COUNT_ADDR,pressCount);
              EEPROM.commit();
           break;
-         case ButtonStart:
+         case BUTTON_START:
              eventCurrentState = STATE_EVENT_IDLE;
           break;
-          case ButtonUp:
+          case BUTTON_UP:
              SetupCount +=500;
-             buttonState = ButtonPause;
+             buttonState = BUTTON_PAUSE;
           break;
-          case ButtonDown:
+          case BUTTON_DOWN:
              SetupCount -=500;
-             buttonState = ButtonPause;
+             buttonState = BUTTON_PAUSE;
           break;
          }
     break;
@@ -162,72 +161,72 @@ void StateManager(){
 }
 void OperationSystem() {
         switch(currentState) {
-            case RunningPiton:
+            case RUNNING_PITON:
                 CloseValve();
                 if (ValveState != sensorState){
-                 currentState = SystemError1;
+                 currentState = SYSTEM_ERROR_1;
                 }
-                else currentState = CheckButton1;
+                else currentState = CHECK_BUTTON_1;
                 break;
                 
-            case CheckButton1:
+            case CHECK_BUTTON_1:
                   buttonState = digitalRead(BUTTON_PIN);
                 if (buttonState == sensorState){
                     errorCount2 = 0;
                     pressCount ++;
                     lcd.displayCounts(pressCount, SetupCount);
-                    currentState = ClosePiton;
+                    currentState = CLOSE_PITON;
                 }
                 else 
-                   currentState = SystemError2;
+                   currentState = SYSTEM_ERROR_2;
                 break;
-            case ClosePiton:
+            case CLOSE_PITON:
                 OpenValve ();
                 if (ValveState != sensorState){
-                 currentState = SystemError1;
+                 currentState = SYSTEM_ERROR_1;
                 }
-                else currentState = CheckButton2 ;
+                else currentState = CHECK_BUTTON_2 ;
                 break;
                 
-            case CheckButton2:
+            case CHECK_BUTTON_2:
                  buttonState = digitalRead(BUTTON_PIN);
                  if(buttonState == sensorState){
                   errorCount3 = 0;
-                  currentState = RunningPiton;
+                  currentState = RUNNING_PITON;
                  }
                  else 
-                   currentState = SystemError2;
+                   currentState = SYSTEM_ERROR_3;
             break;
             
-            case PauseSystem:
+            case PAUSE_SYSTEM:
                  lcd.displayStatus("PAUSE");
                  digitalWrite(MOSFET_PIN, LOW);
                  EEPROM.write(PRESS_COUNT_ADDR,pressCount);
                  EEPROM.commit();
                 break;
                 
-            case SystemError1:
-                currentState = PauseSystem;
+            case SYSTEM_ERROR_1:
+                currentState = PAUSE_SYSTEM;
                 errorCode = 1;
                 break;
                 
-            case SystemError2:
+            case SYSTEM_ERROR_2:
                  errorCount2 ++;
                 if (errorCount2 > 5){
                      errorCode = 2;
-                    currentState = PauseSystem;
+                    currentState = PAUSE_SYSTEM;
                 }
                 else 
-                    currentState = RunningPiton;
+                    currentState = RUNNING_PITON;
                 break;
-            case SystemError3:
+            case  SYSTEM_ERROR_3 :
                   errorCount3 ++;
                 if (errorCount3 > 5){
                     errorCode = 3;
-                  currentState = PauseSystem;
+                  currentState = PAUSE_SYSTEM;
                 }
                 else 
-                    currentState = ClosePiton;
+                    currentState = CLOSE_PITON;
                 
                 break;
         }
@@ -239,7 +238,7 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT);       // Thiết lập chân GPIO34 là INPUT để đọc trạng thái button
   pinMode(MOSFET_PIN, OUTPUT);      // Khởi tạo chân GPIO điều khiển MOSFET là OUTPUT
   digitalWrite(MOSFET_PIN, LOW);    // Đặt ban đầu MOSFET ở trạng thái OFF
-  pinMode(Sensor_Pin, INPUT);      // Thiết lập chân GPIO4 là INPUT
+  pinMode(SENSOR_PIN, INPUT);      // Thiết lập chân GPIO4 là INPUT
     pinMode(BUTTON_UP_PIN, INPUT_PULLUP);
     pinMode(BUTTON_DOWN_PIN, INPUT_PULLUP);
     pinMode(BUTTON_PAUSE_PIN, INPUT_PULLUP);
@@ -247,7 +246,6 @@ void setup() {
     lcd.begin();
     pressCount = EEPROM.read(PRESS_COUNT_ADDR);
   //Preferences.begin("Tool", false);
-
     // Đọc giá trị pressCount từ Flash (nếu có)
   //pressCount = Preferences.getInt("pressCount", 0); // Đọc giá trị, mặc định là 0 nếu không tồn tại
 }
